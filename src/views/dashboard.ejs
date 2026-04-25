@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Affiliate Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }
+    .stat-card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; text-align: center; }
+    .stat-value { font-size: 2em; font-weight: bold; color: #2563eb; }
+    .btn { background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
+    .btn:hover { background: #1d4ed8; }
+    .btn-secondary { background: #6b7280; }
+    .btn-secondary:hover { background: #4b5563; }
+    .form-group { margin: 15px 0; }
+    input { padding: 8px; width: 300px; border: 1px solid #ddd; border-radius: 4px; }
+    .link-box { background: #f3f4f6; padding: 15px; border-radius: 4px; word-break: break-all; margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f9fafb; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+    .badge-approved { background: #dcfce7; color: #166534; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+  <h1>Affiliate Dashboard</h1>
+  
+  <div class="stats">
+    <div class="stat-card">
+      <div>Total Commissions Earned</div>
+      <div class="stat-value">$${(affiliate.totalEarnedCents / 100).toFixed(2)}</div>
+    </div>
+    <div class="stat-card">
+      <div>Available Balance</div>
+      <div class="stat-value">$${(affiliate.balanceCents / 100).toFixed(2)}</div>
+    </div>
+    <div class="stat-card">
+      <div>Total Paid Out</div>
+      <div class="stat-value">$${(affiliate.totalPaidCents / 100).toFixed(2)}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Referral Link</h2>
+    <div class="form-group">
+      <button class="btn" onclick="generateReferralCode()">Generate New Referral Code</button>
+    </div>
+    <div id="refLink"></div>
+  </div>
+
+  <div class="card">
+    <h2>Request Payout</h2>
+    <p>Minimum payout: $50.00</p>
+    <div class="form-group">
+      <input type="number" id="payoutAmount" placeholder="Amount in USD" step="0.01" min="50">
+      <button class="btn" onclick="requestPayout()">Request Payout</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recent Conversions</h2>
+    <table>
+      <tr><th>Date</th><th>Amount</th><th>Commission</th><th>Status</th></tr>
+      <% affiliate.conversions.forEach(c => { %>
+      <tr>
+        <td><%= new Date(c.createdAt).toLocaleDateString() %></td>
+        <td>$${(c.amountCents / 100).toFixed(2)}</td>
+        <td>$${(c.commissionCents / 100).toFixed(2)}</td>
+        <td><span class="badge badge-<%= c.status.toLowerCase() %>"><%= c.status %></span></td>
+      </tr>
+      <% }); %>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Payout History</h2>
+    <table>
+      <tr><th>Date</th><th>Amount</th><th>Status</th></tr>
+      <% affiliate.payouts.forEach(p => { %>
+      <tr>
+        <td><%= new Date(p.requestedAt).toLocaleDateString() %></td>
+        <td>$${(p.amountCents / 100).toFixed(2)}</td>
+        <td><span class="badge badge-<%= p.status.toLowerCase() %>"><%= p.status %></span></td>
+      </tr>
+      <% }); %>
+    </table>
+  </div>
+
+  <script>
+    const affiliateId = '<%= affiliate.id %>';
+    const baseUrl = '<%= baseUrl %>';
+
+    async function generateReferralCode() {
+      const code = prompt('Enter a custom code (or leave blank for random):');
+      const res = await fetch('/affiliate/referral-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ affiliateId, code: code || undefined }),
+      });
+      const data = await res.json();
+      document.getElementById('refLink').innerHTML = \`
+        <div class="link-box">\${baseUrl}/?ref=\${data.code}</div>
+        <button class="btn" onclick="copyLink('\${baseUrl}/?ref=\${data.code}')">Copy Link</button>
+      \`;
+    }
+
+    function copyLink(url) {
+      navigator.clipboard.writeText(url);
+      alert('Copied to clipboard!');
+    }
+
+    async function requestPayout() {
+      const amount = parseFloat(document.getElementById('payoutAmount').value) * 100;
+      if (!amount || amount < 5000) return alert('Enter amount >= $50');
+      
+      const res = await fetch('/payout/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ affiliateId, amountCents: amount }),
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+      else {
+        alert('Payout requested!');
+        window.location.reload();
+      }
+    }
+
+    // Load referral link on init
+    fetch('/affiliate/link/' + '<%= affiliateId %>_ref' + Math.random().toString(36).substr(2, 8))
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('refLink').innerHTML = \`
+          <div class="link-box">\${d.url}</div>
+          <button class="btn" onclick="copyLink('\${d.url}')">Copy Link</button>
+        \`;
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "prompt-coach-ia",
+  "version": "1.0.0",
+  "description": "Prompt Coach IA - Affiliate + Stripe Connect platform",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "stripe": "^15.0.0",
+    "@prisma/client": "^5.15.0",
+    "cookie-parser": "^1.4.6",
+    "ejs": "^3.1.9",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.15.0",
+    "nodemon": "^3.0.2"
+  }
+}

@@ -1,0 +1,50 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FLY_APP_NAME: ${{ secrets.FLY_APP_NAME || 'prompt-coach-ia' }}
+  FLY_REGION: iad
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          FLY_APP_NAME: ${{ env.FLY_APP_NAME }}
+        run: |
+          echo "Deploying $FLY_APP_NAME to Fly.io..."
+          flyctl deploy --remote-only
+
+      - name: Run Prisma migrations
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ env.FLY_APP_NAME }}
+        run: |
+          echo "Running migrations..."
+          flyctl ssh console -C "cd /app && npx prisma migrate deploy"
