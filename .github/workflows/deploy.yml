@@ -39,7 +39,7 @@ jobs:
           FLY_APP_NAME: ${{ env.FLY_APP_NAME }}
         run: |
           echo "Deploying $FLY_APP_NAME to Fly.io..."
-          flyctl deploy --remote-only
+          flyctl deploy
 
       - name: Run Prisma migrations
         env:
